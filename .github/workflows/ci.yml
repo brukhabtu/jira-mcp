@@ -154,8 +154,8 @@ jobs:
     steps:
       - name: Test Docker image runs
         run: |
-          docker run --rm ${{ needs.build-image.outputs.image }} python -c "import jira_mcp; print('Docker image works!')"
+          docker run --rm ${{ needs.build-image.outputs.image }} uv run python -c "import jira_mcp; print('Docker image works!')"
           
       - name: Test Docker image health check
         run: |
-          docker run --rm ${{ needs.build-image.outputs.image }} python -c "import jira_mcp; print('OK')"
+          docker run --rm ${{ needs.build-image.outputs.image }} uv run python -c "import jira_mcp; print('OK')"
