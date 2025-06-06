@@ -68,13 +68,13 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root --workdir /app
+      options: --user root
     steps:
       - name: Run ruff linting
-        run: uv run ruff check jira_mcp
+        run: cd /app && uv run ruff check jira_mcp
         
       - name: Run ruff formatting check
-        run: uv run ruff format --check jira_mcp
+        run: cd /app && uv run ruff format --check jira_mcp
 
   type-check:
     name: Type Check
@@ -82,10 +82,10 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root --workdir /app
+      options: --user root
     steps:
       - name: Run mypy
-        run: uv run mypy jira_mcp
+        run: cd /app && uv run mypy jira_mcp
 
   test:
     name: Test
@@ -93,16 +93,17 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root --workdir /app
+      options: --user root
     steps:
       - name: Run unit tests
-        run: uv run pytest tests/unit -v --tb=short
+        run: cd /app && uv run pytest tests/unit -v --tb=short
         
       - name: Run integration tests
-        run: uv run pytest tests/integration -v --tb=short
+        run: cd /app && uv run pytest tests/integration -v --tb=short
         
       - name: Generate test coverage
         run: |
+          cd /app
           uv run coverage run -m pytest
           uv run coverage report --show-missing
           uv run coverage xml
@@ -110,7 +111,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          file: /app/coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -120,13 +121,13 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root --workdir /app
+      options: --user root
     steps:
       - name: Run safety check
-        run: uv run safety check
+        run: cd /app && uv run safety check
           
       - name: Run bandit security scan
-        run: uv run bandit -r jira_mcp
+        run: cd /app && uv run bandit -r jira_mcp
 
   build:
     name: Build Package
@@ -134,10 +135,10 @@ jobs:
     needs: [build-image, lint, type-check, test, security]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root --workdir /app
+      options: --user root
     steps:
       - name: Build package
-        run: uv run python -m build
+        run: cd /app && uv run python -m build
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
