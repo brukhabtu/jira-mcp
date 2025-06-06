@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  jira-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jira-mcp-server
+    environment:
+      - JIRA_BASE_URL=${JIRA_BASE_URL:-https://your-domain.atlassian.net}
+      - JIRA_API_USER=${JIRA_API_USER:-your-email@example.com}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN:-your-api-token}
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-stdio}
+      - MCP_PORT=${MCP_PORT:-8000}
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "${MCP_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import jira_mcp; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - jira-mcp-network
+
+networks:
+  jira-mcp-network:
+    driver: bridge
