@@ -1,10 +1,18 @@
-# Use Python slim image as base
-FROM python:3.12-slim as builder
+# Multi-stage Dockerfile for Jira MCP Server
+ARG PYTHON_VERSION=3.12
+ARG BUILD_ENV=production
 
-# Install system dependencies
+# Base image with security updates
+FROM python:${PYTHON_VERSION}-slim AS base
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+# Builder stage
+FROM base AS builder
+
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
-    curl \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -13,53 +21,70 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
+# Copy dependency files first (better caching)
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies to /app/.venv
-RUN uv sync --frozen --no-install-project --no-dev
+# Install dependencies based on build environment
+RUN if [ "$BUILD_ENV" = "ci" ]; then \
+        uv sync --frozen --no-install-project --dev; \
+    else \
+        uv sync --frozen --no-install-project; \
+    fi
 
-# Multi-stage build: production image
-FROM python:3.12-slim as production
+# Copy source code
+COPY . .
 
-# Install system dependencies for runtime
+# Install the application
+RUN uv pip install --no-deps .
+
+# Production stage
+FROM base AS production
+
+# Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --gid 1000 app \
+    && apt-get clean
+
+# Create non-root user
+RUN groupadd --gid 1000 app \
     && useradd --uid 1000 --gid app --shell /bin/bash --create-home app
+
+# Install uv in production
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Set working directory
 WORKDIR /app
 
-# Copy virtual environment from builder stage
+# Copy virtual environment and app from builder
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
+COPY --from=builder --chown=app:app /app/jira_mcp /app/jira_mcp
 
-# Copy application code
-COPY --chown=app:app . .
+# Copy tests and config files for CI builds
+COPY --from=builder --chown=app:app /app/tests /app/tests
+COPY --from=builder --chown=app:app /app/pyproject.toml /app/pyproject.toml
+COPY --from=builder --chown=app:app /app/README.md /app/README.md
 
-# Add .venv/bin to PATH
+# Set up PATH for virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
-
-# Install the application
-RUN /app/.venv/bin/python -m pip install --no-deps .
+ENV PYTHONPATH="/app"
 
 # Switch to non-root user
 USER app
 
-# Set environment variables
+# Set Python environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import jira_mcp; print('OK')" || exit 1
+# Set entrypoint to uv run
+ENTRYPOINT ["uv", "run"]
 
-# Default command
+# Default command to start MCP server
 CMD ["python", "-m", "jira_mcp"]
 
-# Labels
+# Metadata labels
 LABEL org.opencontainers.image.title="Jira MCP Server"
 LABEL org.opencontainers.image.description="Model Context Protocol server for Jira integration"
-LABEL org.opencontainers.image.vendor="Engineering Team"
+LABEL org.opencontainers.image.vendor="Bruk Habtu"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/brukhabtu/jira-mcp"

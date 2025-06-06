@@ -27,6 +27,10 @@ dev-dependencies = [
     "mypy>=1.7.0",
     "ruff>=0.1.0",
     "pytest-asyncio>=1.0.0",
+    "coverage[toml]>=7.0.0",
+    "safety>=3.0.0",
+    "bandit>=1.7.0",
+    "build>=1.0.0",
 ]
 
 [tool.ruff]

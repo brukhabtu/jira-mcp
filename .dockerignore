@@ -42,7 +42,6 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-tests/
 docs/
 *.md
 CLAUDE.md

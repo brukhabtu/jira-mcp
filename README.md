@@ -91,29 +91,63 @@ Options:
 
 ## Integration with MCP Clients
 
-### Claude Desktop
+### Claude Desktop (Docker - Recommended)
 
-**Option 1: Use system environment variables (recommended)**
+**Option 1: Using pre-built Docker image (easiest)**
 
-Add your credentials to your shell profile (`.bashrc`, `.zshrc`, etc.):
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--env", "JIRA_BASE_URL=https://yourcompany.atlassian.net",
+        "--env", "JIRA_API_USER=your-email@company.com", 
+        "--env", "JIRA_API_TOKEN=your-api-token",
+        "ghcr.io/brukhabtu/jira-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+**Option 2: Using environment variables (more secure)**
+
+Set your credentials in your shell profile (`.bashrc`, `.zshrc`, etc.):
 ```bash
 export JIRA_BASE_URL="https://yourcompany.atlassian.net"
 export JIRA_API_USER="your-email@company.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 
-Then use a minimal Claude Desktop configuration:
+Then use this config:
 ```json
 {
   "mcpServers": {
     "jira": {
-      "command": "jira-mcp"
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--env", "JIRA_BASE_URL",
+        "--env", "JIRA_API_USER",
+        "--env", "JIRA_API_TOKEN", 
+        "ghcr.io/brukhabtu/jira-mcp:latest"
+      ]
     }
   }
 }
 ```
 
-**Option 2: Specify environment variables in config**
+**Option 3: Local installation (if you prefer)**
+
+```bash
+# Install with uv
+git clone https://github.com/brukhabtu/jira-mcp.git
+cd jira-mcp
+uv sync
+uv pip install -e .
+```
 
 ```json
 {
@@ -130,15 +164,72 @@ Then use a minimal Claude Desktop configuration:
 }
 ```
 
-⚠️ **Security Note**: Option 1 is more secure as it keeps credentials out of config files.
+### Advanced Docker Usage
+
+**Running as HTTP Service (for multiple clients)**
+
+```bash
+# Run as background service
+docker run -d --name jira-mcp \
+  -p 8000:8000 \
+  -e JIRA_BASE_URL=https://yourcompany.atlassian.net \
+  -e JIRA_API_USER=your-email@company.com \
+  -e JIRA_API_TOKEN=your-api-token \
+  -e MCP_TRANSPORT=http \
+  --restart unless-stopped \
+  ghcr.io/brukhabtu/jira-mcp:latest
+
+# Connect via HTTP from any MCP client
+# Server will be available at http://localhost:8000
+```
+
 
 ### Other MCP Clients
 
-The server supports all MCP transport protocols:
+The Docker image supports all MCP transport protocols:
 
 - **stdio**: For local desktop applications (Claude Desktop, etc.)
-- **HTTP**: For web applications and remote clients
+- **HTTP**: For web applications and remote clients  
 - **SSE**: For real-time web applications
+
+Example HTTP usage:
+```bash
+# Start HTTP server
+docker run -p 8000:8000 \
+  -e MCP_TRANSPORT=http \
+  -e JIRA_BASE_URL=https://yourcompany.atlassian.net \
+  -e JIRA_API_USER=your-email@company.com \
+  -e JIRA_API_TOKEN=your-api-token \
+  ghcr.io/brukhabtu/jira-mcp:latest
+
+# Connect from any HTTP MCP client to http://localhost:8000
+```
+
+## Docker
+
+Build and run with Docker:
+
+```bash
+# Build the image
+docker build -t jira-mcp .
+
+# Run with stdio transport (default)
+docker run -e JIRA_BASE_URL=https://your-domain.atlassian.net \
+           -e JIRA_API_USER=your-email@example.com \
+           -e JIRA_API_TOKEN=your-api-token \
+           jira-mcp
+
+# Run with HTTP transport
+docker run -p 8000:8000 \
+           -e JIRA_BASE_URL=https://your-domain.atlassian.net \
+           -e JIRA_API_USER=your-email@example.com \
+           -e JIRA_API_TOKEN=your-api-token \
+           -e MCP_TRANSPORT=http \
+           jira-mcp
+
+# Use pre-built image from GitHub Container Registry
+docker run ghcr.io/brukhabtu/jira-mcp:latest
+```
 
 ## Development
 
@@ -148,7 +239,7 @@ The server supports all MCP transport protocols:
 # Install dependencies
 uv sync
 
-# Run all tests (41 unit tests, 1 integration test)
+# Run all tests (55 unit and integration tests)
 uv run pytest
 
 # Run only unit tests

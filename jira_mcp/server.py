@@ -57,7 +57,7 @@ class JiraMCPServer:
         return [
             # Exclude all destructive operations
             RouteMap(methods=["POST", "PUT", "PATCH", "DELETE"], mcp_type=MCPType.EXCLUDE),
-            
+
             # Include safe read-only endpoints for engineering teams
             RouteMap(pattern=r"^/rest/api/3/issue/[^/]+$", methods=["GET"], mcp_type=MCPType.TOOL),
             RouteMap(pattern=r"^/rest/api/3/search$", methods=["GET"], mcp_type=MCPType.TOOL),
@@ -70,7 +70,7 @@ class JiraMCPServer:
             RouteMap(pattern=r"^/rest/api/3/issue/[^/]+/worklog.*", methods=["GET"], mcp_type=MCPType.TOOL),
             RouteMap(pattern=r"^/rest/api/3/dashboard.*", methods=["GET"], mcp_type=MCPType.TOOL),
             RouteMap(pattern=r"^/rest/api/3/filter.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            
+
             # Exclude everything else by default
             RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE)
         ]
