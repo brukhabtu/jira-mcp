@@ -68,7 +68,7 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+      options: --user root --workdir /app
     steps:
       - name: Run ruff linting
         run: uv run ruff check jira_mcp
@@ -82,7 +82,7 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+      options: --user root --workdir /app
     steps:
       - name: Run mypy
         run: uv run mypy jira_mcp
@@ -93,7 +93,7 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+      options: --user root --workdir /app
     steps:
       - name: Run unit tests
         run: uv run pytest tests/unit -v --tb=short
@@ -120,7 +120,7 @@ jobs:
     needs: [build-image]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+      options: --user root --workdir /app
     steps:
       - name: Run safety check
         run: uv run safety check
@@ -134,7 +134,7 @@ jobs:
     needs: [build-image, lint, type-check, test, security]
     container:
       image: ${{ needs.build-image.outputs.image }}
-      options: --user root
+      options: --user root --workdir /app
     steps:
       - name: Build package
         run: uv run python -m build
@@ -143,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/
+          path: /app/dist/
 
   test-image:
     name: Test Docker Image
