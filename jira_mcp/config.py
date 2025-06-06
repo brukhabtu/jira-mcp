@@ -1,4 +1,5 @@
 """Configuration models for Jira MCP server."""
+
 from __future__ import annotations
 
 import os

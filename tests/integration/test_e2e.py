@@ -1,4 +1,5 @@
 """End-to-end integration tests for jira_mcp."""
+
 import pytest
 from unittest.mock import AsyncMock, patch
 
@@ -35,17 +36,17 @@ class TestEndToEndIntegration:
         assert spec_url.startswith("https://")
 
         # Test that auth client creation works
-        auth_client_created = hasattr(server, 'jira_client')
+        auth_client_created = hasattr(server, "jira_client")
         assert auth_client_created
 
     @pytest.mark.integration
-    @pytest.mark.slow  
+    @pytest.mark.slow
     def test_openapi_spec_url_accessibility(self) -> None:
         """Test that the OpenAPI spec URL is accessible (real network test)."""
         config = AppConfig(
             jira=JiraConfig(
                 base_url="https://test.atlassian.net",
-                user="test@example.com", 
+                user="test@example.com",
                 api_token="test-token",
             ),
             mcp=MCPConfig(),

@@ -1,4 +1,5 @@
 """Unit tests for configuration models and loading."""
+
 import os
 
 import pytest
@@ -28,12 +29,16 @@ class TestJiraConfig:
 
         # Empty user
         with pytest.raises(ValueError, match="Field cannot be empty"):
-            JiraConfig(base_url="https://test.atlassian.net", user="", api_token="token")
+            JiraConfig(
+                base_url="https://test.atlassian.net", user="", api_token="token"
+            )
 
         # Empty API token
         with pytest.raises(ValueError, match="Field cannot be empty"):
             JiraConfig(
-                base_url="https://test.atlassian.net", user="test@example.com", api_token=""
+                base_url="https://test.atlassian.net",
+                user="test@example.com",
+                api_token="",
             )
 
     def test_strips_whitespace(self) -> None:
@@ -118,17 +123,23 @@ class TestAppConfig:
 
     def test_from_env_missing_required_vars(self, clean_env: None) -> None:
         """Test error when required environment variables are missing."""
-        with pytest.raises(ValueError, match="JIRA_BASE_URL environment variable is required"):
+        with pytest.raises(
+            ValueError, match="JIRA_BASE_URL environment variable is required"
+        ):
             AppConfig.from_env()
 
         # Test missing user
         os.environ["JIRA_BASE_URL"] = "https://test.atlassian.net"
-        with pytest.raises(ValueError, match="JIRA_API_USER environment variable is required"):
+        with pytest.raises(
+            ValueError, match="JIRA_API_USER environment variable is required"
+        ):
             AppConfig.from_env()
 
         # Test missing token
         os.environ["JIRA_API_USER"] = "test@example.com"
-        with pytest.raises(ValueError, match="JIRA_API_TOKEN environment variable is required"):
+        with pytest.raises(
+            ValueError, match="JIRA_API_TOKEN environment variable is required"
+        ):
             AppConfig.from_env()
 
     def test_env_var_edge_cases(self, clean_env: None) -> None:

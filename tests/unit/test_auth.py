@@ -1,4 +1,5 @@
 """Unit tests for Jira authentication client."""
+
 import base64
 
 import pytest
@@ -38,7 +39,6 @@ class TestJiraClient:
         decoded_creds = base64.b64decode(encoded_creds).decode("utf-8")
         assert decoded_creds == "test@example.com:test-token"
 
-
     def test_auth_headers_handles_special_characters(self) -> None:
         """Test that auth headers properly encode special characters in credentials."""
         config = JiraConfig(
@@ -60,7 +60,10 @@ class TestJiraClient:
         "path,expected_url",
         [
             ("/rest/api/3/issue", "https://test.atlassian.net/rest/api/3/issue"),
-            ("rest/api/3/issue", "https://test.atlassian.netrest/api/3/issue"),  # No leading slash
+            (
+                "rest/api/3/issue",
+                "https://test.atlassian.netrest/api/3/issue",
+            ),  # No leading slash
             ("/", "https://test.atlassian.net/"),
             ("", "https://test.atlassian.net"),
         ],

@@ -1,4 +1,5 @@
 """Jira MCP server using FastMCP OpenAPI integration."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -43,36 +44,70 @@ class JiraMCPServer:
         basic_token = auth_header.split(" ")[1]
         headers = {
             "Authorization": f"Basic {basic_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         return httpx.AsyncClient(
             base_url=self.config.jira.base_url,
             headers=headers,
-            timeout=self.config.jira.timeout
+            timeout=self.config.jira.timeout,
         )
 
     def _get_route_filters(self) -> list[RouteMap]:
         """Get route filtering rules for safe engineering-focused tools."""
         return [
             # Exclude all destructive operations
-            RouteMap(methods=["POST", "PUT", "PATCH", "DELETE"], mcp_type=MCPType.EXCLUDE),
-
+            RouteMap(
+                methods=["POST", "PUT", "PATCH", "DELETE"], mcp_type=MCPType.EXCLUDE
+            ),
             # Include safe read-only endpoints for engineering teams
-            RouteMap(pattern=r"^/rest/api/3/issue/[^/]+$", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/search$", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/project.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/board.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/sprint.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/user.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/issue/[^/]+/comment.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/issue/[^/]+/changelog.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/issue/[^/]+/worklog.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/dashboard.*", methods=["GET"], mcp_type=MCPType.TOOL),
-            RouteMap(pattern=r"^/rest/api/3/filter.*", methods=["GET"], mcp_type=MCPType.TOOL),
-
+            RouteMap(
+                pattern=r"^/rest/api/3/issue/[^/]+$",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/search$", methods=["GET"], mcp_type=MCPType.TOOL
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/project.*",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/board.*", methods=["GET"], mcp_type=MCPType.TOOL
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/sprint.*", methods=["GET"], mcp_type=MCPType.TOOL
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/user.*", methods=["GET"], mcp_type=MCPType.TOOL
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/issue/[^/]+/comment.*",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/issue/[^/]+/changelog.*",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/issue/[^/]+/worklog.*",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/dashboard.*",
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            ),
+            RouteMap(
+                pattern=r"^/rest/api/3/filter.*", methods=["GET"], mcp_type=MCPType.TOOL
+            ),
             # Exclude everything else by default
-            RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE)
+            RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE),
         ]
 
     async def initialize(self) -> None:
@@ -87,7 +122,7 @@ class JiraMCPServer:
         self.mcp_server = FastMCP.from_openapi(
             openapi_spec=openapi_spec,
             client=auth_client,
-            route_maps=self._get_route_filters()
+            route_maps=self._get_route_filters(),
         )
 
     def run(self) -> None:

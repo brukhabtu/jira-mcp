@@ -1,4 +1,5 @@
 """Main entry point for the Jira MCP server."""
+
 from __future__ import annotations
 
 import argparse
@@ -92,10 +93,12 @@ def main() -> None:
     logger.info("Starting Jira MCP server...")
     try:
         from jira_mcp.server import JiraMCPServer
+
         server = JiraMCPServer(config)
 
         # Initialize the server async components
         import asyncio
+
         asyncio.run(server.initialize())
 
         # Run the MCP server (this will block)

@@ -1,4 +1,5 @@
 """Global test configuration and shared fixtures."""
+
 import os
 import pytest
 
@@ -10,7 +11,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "slow: mark test as slow running")
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Modify test collection for CI environment."""
     # Skip slow tests in CI unless explicitly requested
     if os.environ.get("CI") and not os.environ.get("RUN_SLOW_TESTS"):

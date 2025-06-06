@@ -1,4 +1,5 @@
 """Jira authentication and HTTP client."""
+
 from __future__ import annotations
 
 import base64
@@ -25,13 +26,13 @@ class JiraClient:
     def get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers for Jira API."""
         credentials = f"{self.user}:{self.api_token}"
-        encoded_credentials = base64.b64encode(
-            credentials.encode("utf-8")
-        ).decode("utf-8")
+        encoded_credentials = base64.b64encode(credentials.encode("utf-8")).decode(
+            "utf-8"
+        )
 
         return {
             "Authorization": f"Basic {encoded_credentials}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     async def get(self, path: str) -> Any:

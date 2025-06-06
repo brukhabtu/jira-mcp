@@ -1,4 +1,5 @@
 """Integration tests for CLI functionality."""
+
 import contextlib
 import os
 import sys
@@ -39,13 +40,16 @@ class TestCLIIntegration:
         os.environ["JIRA_API_TOKEN"] = "test-token"
 
         try:
-            with patch("sys.argv", ["jira-mcp"]), patch(
-                "jira_mcp.server.JiraMCPServer"
-            ) as mock_server_class:
+            with (
+                patch("sys.argv", ["jira-mcp"]),
+                patch("jira_mcp.server.JiraMCPServer") as mock_server_class,
+            ):
                 # Mock the server initialization to avoid network calls
                 mock_server = mock_server_class.return_value
                 mock_server.initialize.return_value = None
-                mock_server.run.side_effect = KeyboardInterrupt()  # Simulate graceful exit
+                mock_server.run.side_effect = (
+                    KeyboardInterrupt()
+                )  # Simulate graceful exit
 
                 with contextlib.suppress(KeyboardInterrupt):
                     main()
@@ -72,9 +76,10 @@ class TestCLIIntegration:
             if var in os.environ:
                 del os.environ[var]
 
-        with patch("sys.argv", ["jira-mcp"]), patch(
-            "sys.stderr", new_callable=StringIO
-        ) as mock_stderr:
+        with (
+            patch("sys.argv", ["jira-mcp"]),
+            patch("sys.stderr", new_callable=StringIO) as mock_stderr,
+        ):
             main()
 
             # Check that error message was written to stderr

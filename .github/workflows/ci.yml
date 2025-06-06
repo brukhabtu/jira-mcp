@@ -108,12 +108,13 @@ jobs:
           uv run coverage report --show-missing
           uv run coverage xml
           
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: /app/coverage.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # TODO: Fix codecov upload in container environment
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: /app/coverage.xml
+      #     fail_ci_if_error: false
+      #     token: ${{ secrets.CODECOV_TOKEN }}
 
   security:
     name: Security Scan

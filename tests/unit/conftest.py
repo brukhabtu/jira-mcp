@@ -1,4 +1,5 @@
 """Shared test fixtures for unit tests."""
+
 import os
 from typing import Iterator
 
@@ -29,7 +30,9 @@ def sample_mcp_config() -> MCPConfig:
 
 
 @pytest.fixture
-def sample_app_config(sample_jira_config: JiraConfig, sample_mcp_config: MCPConfig) -> AppConfig:
+def sample_app_config(
+    sample_jira_config: JiraConfig, sample_mcp_config: MCPConfig
+) -> AppConfig:
     """Create a sample AppConfig for testing."""
     return AppConfig(jira=sample_jira_config, mcp=sample_mcp_config)
 
@@ -41,21 +44,21 @@ def clean_env() -> Iterator[None]:
     original_values = {}
     test_vars = [
         "JIRA_BASE_URL",
-        "JIRA_API_USER", 
+        "JIRA_API_USER",
         "JIRA_API_TOKEN",
         "JIRA_TIMEOUT",
         "MCP_TRANSPORT",
         "MCP_PORT",
         "MCP_LOG_LEVEL",
     ]
-    
+
     for var in test_vars:
         if var in os.environ:
             original_values[var] = os.environ[var]
             del os.environ[var]
-    
+
     yield
-    
+
     # Restore original values
     for var in test_vars:
         if var in os.environ:
@@ -72,16 +75,16 @@ def test_env_vars() -> Iterator[dict[str, str]]:
         "JIRA_API_USER": "test@example.com",
         "JIRA_API_TOKEN": "test-token",
     }
-    
+
     # Store original values
     original_values = {}
     for var, value in test_values.items():
         if var in os.environ:
             original_values[var] = os.environ[var]
         os.environ[var] = value
-    
+
     yield test_values
-    
+
     # Clean up
     for var in test_values:
         if var in os.environ:

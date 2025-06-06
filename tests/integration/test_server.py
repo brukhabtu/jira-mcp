@@ -1,4 +1,5 @@
 """Integration tests for server functionality."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -45,5 +46,7 @@ class TestServerIntegration:
         # Mock an initialized server with invalid transport
         server.mcp_server = Mock()
 
-        with pytest.raises(ValueError, match="Unsupported transport: invalid-transport"):
+        with pytest.raises(
+            ValueError, match="Unsupported transport: invalid-transport"
+        ):
             server.run()

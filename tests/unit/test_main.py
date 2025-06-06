@@ -1,4 +1,5 @@
 """Unit tests for the main module."""
+
 import sys
 from pathlib import Path
 
