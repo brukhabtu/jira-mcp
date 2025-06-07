@@ -18,6 +18,7 @@ class JiraConfig(BaseModel):
     user: str
     api_token: str
     timeout: int = 30
+    openapi_spec_path: str | None = None
 
     @field_validator("base_url", "user", "api_token")
     @classmethod
@@ -34,6 +35,7 @@ class MCPConfig(BaseModel):
     transport: str = "stdio"
     port: int = 8000
     log_level: str = "INFO"
+    enable_security_filtering: bool = True
 
 
 class AppConfig(BaseModel):
@@ -62,21 +64,27 @@ class AppConfig(BaseModel):
 
         # Optional environment variables with defaults
         timeout = int(os.getenv("JIRA_TIMEOUT", "30"))
+        openapi_spec_path = os.getenv("JIRA_OPENAPI_SPEC_PATH")
         transport = os.getenv("MCP_TRANSPORT", "stdio")
         port = int(os.getenv("MCP_PORT", "8000"))
         log_level = os.getenv("MCP_LOG_LEVEL", "INFO")
+        enable_security_filtering = os.getenv(
+            "MCP_ENABLE_SECURITY_FILTERING", "true"
+        ).lower() in ("true", "1", "yes")
 
         jira_config = JiraConfig(
             base_url=base_url,
             user=user,
             api_token=api_token,
             timeout=timeout,
+            openapi_spec_path=openapi_spec_path,
         )
 
         mcp_config = MCPConfig(
             transport=transport,
             port=port,
             log_level=log_level,
+            enable_security_filtering=enable_security_filtering,
         )
 
         return cls(jira=jira_config, mcp=mcp_config)

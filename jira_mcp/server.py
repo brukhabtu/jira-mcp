@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -24,19 +26,34 @@ class JiraMCPServer:
         self.jira_client = JiraClient(config.jira)
         self.mcp_server: FastMCPOpenAPI | None = None
 
-    def _get_openapi_spec_url(self) -> str:
-        """Get the URL for Jira's OpenAPI specification."""
-        return "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json"
+    def _get_bundled_spec_path(self) -> Path:
+        """Get the path to the bundled OpenAPI specification."""
+        return Path(__file__).parent / "jira_openapi_spec.json"
 
-    async def _fetch_openapi_spec(self) -> dict[str, Any]:
-        """Fetch the OpenAPI specification from Jira."""
-        spec_url = self._get_openapi_spec_url()
+    def _load_openapi_spec(self) -> dict[str, Any]:
+        """Load the OpenAPI specification from file or use bundled version."""
+        import logging
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(spec_url)
-            response.raise_for_status()
-            spec: dict[str, Any] = response.json()
-            return spec
+        logger = logging.getLogger("jira_mcp")
+
+        # Use custom path if provided, otherwise use bundled spec
+        if self.config.jira.openapi_spec_path:
+            spec_path = Path(self.config.jira.openapi_spec_path)
+            logger.info(f"Using custom OpenAPI spec: {spec_path}")
+        else:
+            spec_path = self._get_bundled_spec_path()
+            logger.info("Using bundled OpenAPI spec")
+
+        try:
+            with open(spec_path, encoding="utf-8") as f:
+                spec: dict[str, Any] = json.load(f)
+                return spec
+        except FileNotFoundError as e:
+            msg = f"OpenAPI spec file not found: {spec_path}"
+            raise FileNotFoundError(msg) from e
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON in OpenAPI spec file {spec_path}: {e}"
+            raise ValueError(msg) from e
 
     async def _create_authenticated_client(self) -> httpx.AsyncClient:
         """Create an authenticated HTTP client for Jira API calls."""
@@ -54,75 +71,96 @@ class JiraMCPServer:
         )
 
     def _get_route_filters(self) -> list[RouteMap]:
-        """Get route filtering rules for safe engineering-focused tools."""
-        return [
-            # Exclude all destructive operations
+        """Get route filtering rules for safe engineering-focused tools.
+
+        Security Model:
+        1. DENY ALL destructive operations (POST, PUT, PATCH, DELETE)
+        2. ALLOW ONLY specific read-only GET endpoints
+        3. DEFAULT DENY everything else
+
+        This whitelist approach ensures only safe, read-only operations
+        are exposed through the MCP interface.
+        """
+        # Define safe read-only endpoints for engineering workflows
+        safe_endpoints = [
+            # Core issue management (read-only)
+            r"^/rest/api/3/issue/[^/]+$",  # Get single issue
+            r"^/rest/api/3/search$",  # Search issues/JQL
+            r"^/rest/api/3/issue/[^/]+/comment.*",  # Issue comments
+            r"^/rest/api/3/issue/[^/]+/changelog.*",  # Issue history
+            r"^/rest/api/3/issue/[^/]+/worklog.*",  # Time tracking
+            # Project and structure information
+            r"^/rest/api/3/project.*",  # Project details
+            r"^/rest/api/3/issuetype.*",  # Issue types
+            r"^/rest/api/3/status.*",  # Workflow statuses
+            r"^/rest/api/3/priority.*",  # Issue priorities
+            r"^/rest/api/3/resolution.*",  # Issue resolutions
+            # Agile/Scrum information
+            r"^/rest/api/3/board.*",  # Agile boards
+            r"^/rest/api/3/sprint.*",  # Sprint information
+            # User and team information
+            r"^/rest/api/3/user.*",  # User profiles
+            r"^/rest/api/3/group.*",  # User groups
+            # Dashboards and reporting
+            r"^/rest/api/3/dashboard.*",  # Dashboard data
+            r"^/rest/api/3/filter.*",  # Saved filters
+            # System information (safe metadata)
+            r"^/rest/api/3/serverInfo$",  # Server version info
+            r"^/rest/api/3/field.*",  # Custom fields metadata
+        ]
+
+        filters = [
+            # SECURITY: Block ALL destructive operations first
             RouteMap(
                 methods=["POST", "PUT", "PATCH", "DELETE"], mcp_type=MCPType.EXCLUDE
             ),
-            # Include safe read-only endpoints for engineering teams
-            RouteMap(
-                pattern=r"^/rest/api/3/issue/[^/]+$",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/search$", methods=["GET"], mcp_type=MCPType.TOOL
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/project.*",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/board.*", methods=["GET"], mcp_type=MCPType.TOOL
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/sprint.*", methods=["GET"], mcp_type=MCPType.TOOL
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/user.*", methods=["GET"], mcp_type=MCPType.TOOL
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/issue/[^/]+/comment.*",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/issue/[^/]+/changelog.*",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/issue/[^/]+/worklog.*",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/dashboard.*",
-                methods=["GET"],
-                mcp_type=MCPType.TOOL,
-            ),
-            RouteMap(
-                pattern=r"^/rest/api/3/filter.*", methods=["GET"], mcp_type=MCPType.TOOL
-            ),
-            # Exclude everything else by default
-            RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE),
         ]
+
+        # Add whitelisted read-only endpoints
+        filters.extend(
+            RouteMap(
+                pattern=pattern,
+                methods=["GET"],
+                mcp_type=MCPType.TOOL,
+            )
+            for pattern in safe_endpoints
+        )
+
+        # SECURITY: Default deny everything else
+        filters.append(RouteMap(pattern=r".*", mcp_type=MCPType.EXCLUDE))
+
+        return filters
 
     async def initialize(self) -> None:
         """Initialize the FastMCP server with Jira OpenAPI spec."""
-        # Fetch OpenAPI specification
-        openapi_spec = await self._fetch_openapi_spec()
+        import logging
+
+        logger = logging.getLogger("jira_mcp")
+
+        # Load OpenAPI specification
+        openapi_spec = self._load_openapi_spec()
 
         # Create authenticated client
         auth_client = await self._create_authenticated_client()
 
-        # Create FastMCP server from OpenAPI specification with filtering
+        # Create FastMCP server from OpenAPI specification
+        if self.config.mcp.enable_security_filtering:
+            # Use security filtering (default, recommended)
+            route_maps = self._get_route_filters()
+            logger.info(
+                "Security filtering ENABLED - only safe read-only endpoints exposed"
+            )
+        else:
+            # WARNING: No security filtering - exposes ALL Jira API endpoints
+            route_maps = None
+            logger.warning(
+                "Security filtering DISABLED - ALL Jira API endpoints exposed including destructive operations!"
+            )
+
         self.mcp_server = FastMCP.from_openapi(
             openapi_spec=openapi_spec,
             client=auth_client,
-            route_maps=self._get_route_filters(),
+            route_maps=route_maps,
         )
 
     def run(self) -> None:
