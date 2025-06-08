@@ -1,7 +1,6 @@
 """End-to-end integration tests for jira_mcp."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from jira_mcp.config import AppConfig, JiraConfig, MCPConfig
 from jira_mcp.server import JiraMCPServer
@@ -30,10 +29,10 @@ class TestEndToEndIntegration:
         assert server.jira_client is not None
         assert server.mcp_server is None  # Should be None before initialization
 
-        # Test that URL construction works
-        spec_url = server._get_openapi_spec_url()
-        assert isinstance(spec_url, str)
-        assert spec_url.startswith("https://")
+        # Test that bundled spec path works
+        spec_path = server._get_bundled_spec_path()
+        assert spec_path.exists()
+        assert spec_path.name == "jira_openapi_spec.json"
 
         # Test that auth client creation works
         auth_client_created = hasattr(server, "jira_client")
@@ -41,8 +40,8 @@ class TestEndToEndIntegration:
 
     @pytest.mark.integration
     @pytest.mark.slow
-    def test_openapi_spec_url_accessibility(self) -> None:
-        """Test that the OpenAPI spec URL is accessible (real network test)."""
+    def test_bundled_spec_loading(self) -> None:
+        """Test that the bundled OpenAPI spec loads correctly."""
         config = AppConfig(
             jira=JiraConfig(
                 base_url="https://test.atlassian.net",
@@ -53,17 +52,16 @@ class TestEndToEndIntegration:
         )
 
         server = JiraMCPServer(config)
-        spec_url = server._get_openapi_spec_url()
 
-        # This is a real network test - would be skipped in CI/CD without network
-        # For now, just test the URL format since we don't want to make real calls
-        assert spec_url.startswith("https://")
-        assert "atlassian.com" in spec_url
-        assert spec_url.endswith(".json")
+        # Test that the bundled spec loads without errors
+        spec = server._load_openapi_spec()
 
-        # TODO: Add real network test when appropriate test environment exists
-        # import httpx
-        # response = httpx.get(spec_url, timeout=10)
-        # assert response.status_code == 200
-        # spec = response.json()
+        # Verify it's a valid OpenAPI spec
+        assert isinstance(spec, dict)
+        assert "openapi" in spec
+        assert "paths" in spec
+        assert "info" in spec
+
+        # Should have a reasonable number of endpoints
+        assert len(spec["paths"]) > 100  # Jira has many endpoints
         # assert "openapi" in spec or "swagger" in spec

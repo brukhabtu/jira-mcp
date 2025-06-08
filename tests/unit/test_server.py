@@ -1,7 +1,7 @@
 """Unit tests for MCP server functionality."""
 
 import pytest
-from fastmcp.server.openapi import MCPType, RouteMap
+from fastmcp.server.openapi import MCPType
 
 from jira_mcp.config import AppConfig, JiraConfig, MCPConfig
 from jira_mcp.server import JiraMCPServer
@@ -33,21 +33,17 @@ class TestJiraMCPServer:
         # Should start with no MCP server instance
         assert server.mcp_server is None
 
-    def test_openapi_spec_url_is_stable(self, sample_app_config: AppConfig) -> None:
-        """Test that OpenAPI spec URL is the expected Jira endpoint."""
+    def test_bundled_spec_path_exists(self, sample_app_config: AppConfig) -> None:
+        """Test that bundled OpenAPI spec path is correct."""
         server = JiraMCPServer(sample_app_config)
-        spec_url = server._get_openapi_spec_url()
+        spec_path = server._get_bundled_spec_path()
 
-        # This URL should be stable and point to Jira's official spec
-        expected_url = (
-            "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json"
-        )
-        assert spec_url == expected_url
+        # Should be a Path object pointing to the bundled spec
+        assert spec_path.name == "jira_openapi_spec.json"
+        assert spec_path.parent.name == "jira_mcp"
 
-        # Verify it's a valid URL format
-        assert spec_url.startswith("https://")
-        assert "atlassian.com" in spec_url
-        assert spec_url.endswith(".json")
+        # The file should exist (since we bundled it)
+        assert spec_path.exists(), f"Bundled spec file not found: {spec_path}"
 
     @pytest.mark.parametrize(
         "transport,port",
@@ -71,14 +67,37 @@ class TestJiraMCPServer:
         assert server.config.mcp.transport == transport
         assert server.config.mcp.port == port
 
-    def test_get_openapi_spec_url_method(self, sample_app_config: AppConfig) -> None:
-        """Test that _get_openapi_spec_url method works correctly."""
+    def test_load_openapi_spec_bundled(self, sample_app_config: AppConfig) -> None:
+        """Test that _load_openapi_spec method loads the bundled spec correctly."""
         server = JiraMCPServer(sample_app_config)
 
-        # Test the method exists and returns a string
-        spec_url = server._get_openapi_spec_url()
-        assert isinstance(spec_url, str)
-        assert len(spec_url) > 0
+        # Test loading the bundled spec
+        spec = server._load_openapi_spec()
+        assert isinstance(spec, dict)
+        assert "openapi" in spec
+        assert "paths" in spec
+        assert len(spec["paths"]) > 0
+
+    def test_load_openapi_spec_custom_path(
+        self, sample_jira_config: JiraConfig
+    ) -> None:
+        """Test that custom OpenAPI spec path is used when provided."""
+        # Create config with custom spec path
+        custom_jira_config = JiraConfig(
+            base_url=sample_jira_config.base_url,
+            user=sample_jira_config.user,
+            api_token=sample_jira_config.api_token,
+            timeout=sample_jira_config.timeout,
+            openapi_spec_path="/custom/path/spec.json",
+        )
+        config = AppConfig(jira=custom_jira_config, mcp=MCPConfig())
+        server = JiraMCPServer(config)
+
+        # Should use custom path (even if file doesn't exist, path should be used)
+        import pytest
+
+        with pytest.raises(FileNotFoundError, match="/custom/path/spec.json"):
+            server._load_openapi_spec()
 
     def test_jira_client_configuration_propagation(self) -> None:
         """Test that Jira client gets correct configuration from server config."""

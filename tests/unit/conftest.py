@@ -1,7 +1,7 @@
 """Shared test fixtures for unit tests."""
 
 import os
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 

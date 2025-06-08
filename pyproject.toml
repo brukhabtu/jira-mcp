@@ -21,6 +21,12 @@ dependencies = [
 [project.scripts]
 jira-mcp = "jira_mcp.__main__:main"
 
+[tool.hatch.build.targets.wheel]
+packages = ["jira_mcp"]
+
+[tool.hatch.build.targets.wheel.sources]
+"jira_mcp" = "jira_mcp"
+
 [tool.uv]
 dev-dependencies = [
     "pytest>=7.0.0",
