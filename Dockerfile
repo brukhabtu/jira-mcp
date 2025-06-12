@@ -21,8 +21,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Set working directory
 WORKDIR /app
 
+# Create directory with proper permissions
+RUN mkdir -p /app/.uv && chmod -R 777 /app
+
 # Copy dependency files first (better caching)
 COPY pyproject.toml uv.lock ./
+RUN chmod 666 /app/uv.lock
 
 # Install dependencies based on build environment
 RUN if [ "$BUILD_ENV" = "ci" ]; then \
@@ -56,6 +60,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Set working directory
 WORKDIR /app
 
+# Create proper directory structure with appropriate permissions
+RUN mkdir -p /app/.uv && \
+    chmod -R 777 /app
+
 # Copy virtual environment and app from builder
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --from=builder --chown=app:app /app/jira_mcp /app/jira_mcp
@@ -64,6 +72,11 @@ COPY --from=builder --chown=app:app /app/jira_mcp /app/jira_mcp
 COPY --from=builder --chown=app:app /app/tests /app/tests
 COPY --from=builder --chown=app:app /app/pyproject.toml /app/pyproject.toml
 COPY --from=builder --chown=app:app /app/README.md /app/README.md
+
+# Fix permissions on copied files
+RUN chmod -R 777 /app/.venv && \
+    chmod -R 777 /app/jira_mcp && \
+    chmod -R 777 /app/tests
 
 # Set up PATH for virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
