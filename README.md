@@ -1,34 +1,24 @@
 # Jira MCP Server
 
-A production-ready Jira MCP server using FastMCP 2.0's OpenAPI integration. Automatically exposes your entire Jira instance through the Model Context Protocol (MCP) with zero configuration overhead.
+A Jira MCP server that uses FastMCP 2.0's OpenAPI integration to expose Jira functionality through the Model Context Protocol (MCP).
 
 ## Features
 
-- 🚀 **Zero-maintenance OpenAPI integration** - Automatically generates MCP tools from Jira's official API specification
-- 🔐 **Secure authentication** - Uses Jira API tokens with environment variable support
-- 🌐 **Multiple transports** - Support for stdio, HTTP, and SSE protocols
-- ⚡ **Fast and lightweight** - Minimal overhead with async HTTP client
-- 🔧 **Production-ready** - Type-safe, well-tested, and follows security best practices
-- 📝 **Self-documenting** - All Jira API endpoints automatically become available as MCP tools
+- **OpenAPI integration** - Generates MCP tools from Jira's API specification
+- **Secure authentication** - Uses Jira API tokens
+- **Multiple transports** - Support for stdio, HTTP, and SSE protocols
+- **Security filtering** - Only exposes read-only endpoints by default
+- **Type-safe** - Built with Python type hints and Pydantic models
 
 ## Quick Start
 
-### 1. Installation
-
-```bash
-# Clone and install
-git clone <repository-url>
-cd jira_mcp
-uv sync
-```
-
-### 2. Setup Jira API Token
+### 1. Setup Jira API Token
 
 1. Go to [Atlassian Account Settings](https://id.atlassian.com/manage-profile/security/api-tokens)
 2. Create an API token
 3. Note your Jira instance URL (e.g., `https://yourcompany.atlassian.net`)
 
-### 3. Set Environment Variables
+### 2. Set Environment Variables
 
 ```bash
 export JIRA_BASE_URL="https://yourcompany.atlassian.net"
@@ -36,32 +26,30 @@ export JIRA_API_USER="your-email@company.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 
-### 4. Run the Server
+### 3. Run with Docker (Recommended)
 
 ```bash
-# Default configuration (stdio transport)
-jira-mcp
-
-# Or with custom transport
-jira-mcp --transport http --port 8080
+docker run -e JIRA_BASE_URL=https://yourcompany.atlassian.net \
+           -e JIRA_API_USER=your-email@company.com \
+           -e JIRA_API_TOKEN=your-api-token \
+           ghcr.io/brukhabtu/jira-mcp:latest
 ```
 
 ## How It Works
 
-The server automatically:
+The server:
 
-1. **Downloads** Jira's official OpenAPI specification
-2. **Generates** MCP tools for every Jira API endpoint
-3. **Authenticates** requests using your API token
-4. **Exposes** your entire Jira instance through MCP
+1. Downloads Jira's OpenAPI specification
+2. Generates MCP tools for Jira API endpoints
+3. Authenticates requests using your API token
+4. Applies security filtering to expose only safe operations
 
-This means you get instant access to:
-- Issue management (create, update, search, transition)
-- Project administration
-- User and permission management  
+Available functionality:
+- Issue reading and search
+- Project information
+- User and team data
+- Agile boards and sprints
 - Dashboards and filters
-- Webhooks and automation
-- And every other Jira Cloud API feature!
 
 ## Configuration
 
@@ -73,9 +61,11 @@ This means you get instant access to:
 | `JIRA_API_USER` | ✅ | - | Your Jira username/email address |
 | `JIRA_API_TOKEN` | ✅ | - | Your Jira API token |
 | `JIRA_TIMEOUT` | ❌ | `30` | HTTP timeout in seconds |
+| `JIRA_OPENAPI_SPEC_PATH` | ❌ | bundled | Path to custom OpenAPI spec file |
 | `MCP_TRANSPORT` | ❌ | `stdio` | Transport method (`stdio`, `http`, `sse`) |
 | `MCP_PORT` | ❌ | `8000` | Port for HTTP/SSE transports |
 | `MCP_LOG_LEVEL` | ❌ | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `MCP_ENABLE_SECURITY_FILTERING` | ❌ | `true` | Enable security filtering (blocks destructive operations) |
 
 ### Command Line Options
 
@@ -91,9 +81,9 @@ Options:
 
 ## Integration with MCP Clients
 
-### Claude Desktop (Docker - Recommended)
+### Claude Desktop (Recommended)
 
-**Option 1: Using pre-built Docker image (easiest)**
+Add to your Claude Desktop configuration:
 
 ```json
 {
@@ -112,16 +102,14 @@ Options:
 }
 ```
 
-**Option 2: Using environment variables (more secure)**
-
-Set your credentials in your shell profile (`.bashrc`, `.zshrc`, etc.):
+For enhanced security, set credentials as environment variables in your shell profile:
 ```bash
 export JIRA_BASE_URL="https://yourcompany.atlassian.net"
 export JIRA_API_USER="your-email@company.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 
-Then use this config:
+Then use:
 ```json
 {
   "mcpServers": {
@@ -139,119 +127,17 @@ Then use this config:
 }
 ```
 
-**Option 3: Local installation (if you prefer)**
-
-```bash
-# Install with uv
-git clone https://github.com/brukhabtu/jira-mcp.git
-cd jira-mcp
-uv sync
-uv pip install -e .
-```
-
-```json
-{
-  "mcpServers": {
-    "jira": {
-      "command": "jira-mcp",
-      "env": {
-        "JIRA_BASE_URL": "https://yourcompany.atlassian.net",
-        "JIRA_API_USER": "your-email@company.com",
-        "JIRA_API_TOKEN": "your-api-token"
-      }
-    }
-  }
-}
-```
-
-### Advanced Docker Usage
-
-**Running as HTTP Service (for multiple clients)**
-
-```bash
-# Run as background service
-docker run -d --name jira-mcp \
-  -p 8000:8000 \
-  -e JIRA_BASE_URL=https://yourcompany.atlassian.net \
-  -e JIRA_API_USER=your-email@company.com \
-  -e JIRA_API_TOKEN=your-api-token \
-  -e MCP_TRANSPORT=http \
-  --restart unless-stopped \
-  ghcr.io/brukhabtu/jira-mcp:latest
-
-# Connect via HTTP from any MCP client
-# Server will be available at http://localhost:8000
-```
-
-
-### Other MCP Clients
-
-The Docker image supports all MCP transport protocols:
-
-- **stdio**: For local desktop applications (Claude Desktop, etc.)
-- **HTTP**: For web applications and remote clients  
-- **SSE**: For real-time web applications
-
-Example HTTP usage:
-```bash
-# Start HTTP server
-docker run -p 8000:8000 \
-  -e MCP_TRANSPORT=http \
-  -e JIRA_BASE_URL=https://yourcompany.atlassian.net \
-  -e JIRA_API_USER=your-email@company.com \
-  -e JIRA_API_TOKEN=your-api-token \
-  ghcr.io/brukhabtu/jira-mcp:latest
-
-# Connect from any HTTP MCP client to http://localhost:8000
-```
-
-## Docker
-
-Build and run with Docker:
-
-```bash
-# Build the image
-docker build -t jira-mcp .
-
-# Run with stdio transport (default)
-docker run -e JIRA_BASE_URL=https://your-domain.atlassian.net \
-           -e JIRA_API_USER=your-email@example.com \
-           -e JIRA_API_TOKEN=your-api-token \
-           jira-mcp
-
-# Run with HTTP transport
-docker run -p 8000:8000 \
-           -e JIRA_BASE_URL=https://your-domain.atlassian.net \
-           -e JIRA_API_USER=your-email@example.com \
-           -e JIRA_API_TOKEN=your-api-token \
-           -e MCP_TRANSPORT=http \
-           jira-mcp
-
-# Use pre-built image from GitHub Container Registry
-docker run ghcr.io/brukhabtu/jira-mcp:latest
-```
-
 ## Development
-
-### Setup
 
 ```bash
 # Install dependencies
 uv sync
 
-# Run all tests (55 unit and integration tests)
+# Run tests
 uv run pytest
 
-# Run only unit tests
-uv run pytest tests/unit/
-
-# Run only integration tests  
-uv run pytest tests/integration/
-
-# Type checking (mypy strict mode)
+# Type checking and linting
 uv run mypy jira_mcp/
-
-# Code formatting and linting
 uv run ruff check .
 uv run ruff format .
 ```
@@ -262,14 +148,6 @@ uv run ruff format .
 - **`jira_mcp/auth.py`**: HTTP client with Jira Basic Auth
 - **`jira_mcp/server.py`**: FastMCP integration with OpenAPI spec fetching
 - **`jira_mcp/__main__.py`**: CLI interface with environment-based configuration
-
-### Testing
-
-The project includes 41 unit tests organized in `tests/unit/` covering:
-- Configuration validation and edge cases
-- Authentication and HTTP client behavior
-- Server initialization and error handling
-- Environment variable parsing and type conversion
 
 ## Troubleshooting
 
@@ -290,6 +168,32 @@ The project includes 41 unit tests organized in `tests/unit/` covering:
 - Run `jira-mcp --help` for command line options
 
 ## Security
+
+### Security Filtering
+
+**Default Security Model:**
+- Blocks all destructive operations (POST, PUT, PATCH, DELETE)
+- Allows only safe read-only GET endpoints
+- Default deny for everything else
+
+**Endpoints Exposed:**
+- Issue reading and search
+- Project metadata
+- User and team information
+- Agile boards and sprint data
+- Dashboards and saved filters
+- System information and field metadata
+
+**Configuration:**
+```bash
+# Default: Security filtering enabled
+MCP_ENABLE_SECURITY_FILTERING=true
+
+# Disable filtering (exposes all endpoints)
+MCP_ENABLE_SECURITY_FILTERING=false  # Use with caution
+```
+
+### Additional Security Measures
 
 - API tokens are stored in environment variables, never in code or config files
 - All HTTP requests use TLS encryption

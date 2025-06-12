@@ -10,6 +10,9 @@ import httpx
 from fastmcp import FastMCP
 from fastmcp.server.openapi import MCPType, RouteMap
 
+# Import patches to apply them
+from . import patches  # noqa: F401
+
 if TYPE_CHECKING:
     from fastmcp.server.openapi import FastMCPOpenAPI
 

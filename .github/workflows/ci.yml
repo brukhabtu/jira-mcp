@@ -147,15 +147,3 @@ jobs:
           name: dist
           path: /app/dist/
 
-  test-image:
-    name: Test Docker Image
-    runs-on: ubuntu-latest
-    needs: [build-image, lint, type-check, test, security]
-    steps:
-      - name: Test Docker image runs
-        run: |
-          docker run --rm ${{ needs.build-image.outputs.image }} uv run python -c "import jira_mcp; print('Docker image works!')"
-          
-      - name: Test Docker image health check
-        run: |
-          docker run --rm ${{ needs.build-image.outputs.image }} uv run python -c "import jira_mcp; print('OK')"

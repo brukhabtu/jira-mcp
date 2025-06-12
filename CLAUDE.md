@@ -37,6 +37,10 @@ uv run ruff format .
 
 # Run single test file
 uv run pytest tests/unit/test_config.py -v
+
+# Server Commands
+uv run jira-mcp --help                    # Show server help
+uv run jira-mcp --transport http --port 8080  # Run on HTTP transport
 ```
 
 ### Package Management
@@ -48,19 +52,22 @@ uv add --dev dev-package-name
 
 ### Docker
 ```bash
-# Build Docker image
-docker build -t jira-mcp .
+# Build Docker image with CI dependencies
+docker build --build-arg BUILD_ENV=ci -t jira-mcp .
 
-# Run with environment variables
+# Run with environment variables  
 docker run -e JIRA_BASE_URL=https://company.atlassian.net \
            -e JIRA_API_USER=user@company.com \
            -e JIRA_API_TOKEN=token \
            jira-mcp
+
+# Use published image
+docker run ghcr.io/brukhabtu/jira-mcp:latest
 ```
 
 ## Architecture
 
-This is a production-ready Jira MCP server built with FastMCP 2.0's OpenAPI integration. The project automatically generates MCP tools from Jira's official OpenAPI specification, providing zero-maintenance access to the entire Jira API while implementing security-focused route filtering.
+This is a Jira MCP server built with FastMCP 2.0's OpenAPI integration. The project generates MCP tools from Jira's OpenAPI specification (bundled for reliability), providing access to Jira API while implementing security-focused route filtering.
 
 ### Core Components
 
@@ -77,18 +84,26 @@ This is a production-ready Jira MCP server built with FastMCP 2.0's OpenAPI inte
 - **Transport Flexibility**: Support for stdio (default), HTTP, and SSE transports
 - **Authenticated HTTP Client**: Pre-configured httpx client with Basic Auth for all Jira API requests
 
-### Route Filtering Strategy
+### Security and Route Filtering
 
-The server implements a security-focused approach:
-- **Excludes all destructive operations** (POST, PUT, PATCH, DELETE) by default
-- **Includes specific read-only patterns** for engineering teams:
-  - Issue retrieval (`/rest/api/3/issue/{id}`)
-  - Issue search (`/rest/api/3/search`)
-  - Project information (`/rest/api/3/project.*`)
-  - Board and sprint data (`/rest/api/3/board.*`, `/rest/api/3/sprint.*`)
-  - User information (`/rest/api/3/user.*`)
-  - Comments, changelog, and worklog (read-only)
-  - Dashboards and filters
+The server implements a security-first approach with configurable filtering:
+
+**Default Security Model (RECOMMENDED):**
+1. **DENY ALL** destructive operations (POST, PUT, PATCH, DELETE)
+2. **ALLOW ONLY** specific safe read-only GET endpoints
+3. **DEFAULT DENY** everything else
+
+**Whitelisted Safe Endpoints:**
+- Core issue management (get, search, comments, history, worklog)
+- Project information (projects, issue types, statuses, priorities, resolutions)
+- Agile data (boards, sprints)
+- User and team information (users, groups)
+- Dashboards and filters
+- Safe system metadata (server info, custom fields)
+
+**Security Configuration:**
+- `MCP_ENABLE_SECURITY_FILTERING=true` (default): Only safe endpoints exposed
+- `MCP_ENABLE_SECURITY_FILTERING=false`: **WARNING** - Exposes ALL Jira API endpoints including destructive operations
 
 ### Required Environment Variables
 - `JIRA_BASE_URL`: Your Jira instance URL (e.g., `https://company.atlassian.net`)
@@ -97,15 +112,22 @@ The server implements a security-focused approach:
 
 ### Optional Environment Variables
 - `JIRA_TIMEOUT`: HTTP timeout in seconds (default: 30)
+- `JIRA_OPENAPI_SPEC_PATH`: Path to custom OpenAPI spec file (default: uses bundled spec)
 - `MCP_TRANSPORT`: Transport method - stdio, http, sse (default: stdio)
 - `MCP_PORT`: Port for HTTP/SSE transport (default: 8000)
 - `MCP_LOG_LEVEL`: Logging level (default: INFO)
+- `MCP_ENABLE_SECURITY_FILTERING`: Enable security filtering (default: true)
 
-### Testing Architecture
+### CI/CD and Testing
 
-The project has 55+ tests organized in:
+**GitHub Actions Pipeline:**
+- Builds and pushes Docker images to GHCR (`ghcr.io/brukhabtu/jira-mcp`)
+- All CI steps run in containers for consistency
+- Multi-stage Docker build with production and CI targets
+
+**Testing Architecture:**
 - **`tests/unit/`**: Unit tests for individual components with mocking
-- **`tests/integration/`**: Integration tests including CLI and server initialization
+- **`tests/integration/`**: Integration tests including CLI and server initialization  
 - **Test fixtures**: Shared in `conftest.py` files for test configuration and Jira client mocking
 
 ### Async Initialization Pattern
