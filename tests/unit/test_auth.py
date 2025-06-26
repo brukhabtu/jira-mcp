@@ -5,24 +5,24 @@ import base64
 import pytest
 
 from jira_mcp.auth import JiraClient
-from jira_mcp.config import JiraConfig
+from jira_mcp.settings import JiraSettings
 
 
 class TestJiraClient:
     """Tests for JiraClient authentication."""
 
-    def test_stores_config_correctly(self, sample_jira_config: JiraConfig) -> None:
+    def test_stores_config_correctly(self, sample_jira_settings: JiraSettings) -> None:
         """Test that JiraClient properly stores configuration values."""
-        client = JiraClient(sample_jira_config)
+        client = JiraClient(sample_jira_settings)
 
         assert client.base_url == "https://test.atlassian.net"
         assert client.user == "test@example.com"
         assert client.api_token == "test-token"
         assert client.timeout == 30
 
-    def test_auth_headers_format(self, sample_jira_config: JiraConfig) -> None:
+    def test_auth_headers_format(self, sample_jira_settings: JiraSettings) -> None:
         """Test that auth headers are properly formatted for Basic Auth."""
-        client = JiraClient(sample_jira_config)
+        client = JiraClient(sample_jira_settings)
         headers = client.get_auth_headers()
 
         # Verify header structure
@@ -41,13 +41,13 @@ class TestJiraClient:
 
     def test_auth_headers_handles_special_characters(self) -> None:
         """Test that auth headers properly encode special characters in credentials."""
-        config = JiraConfig(
+        settings = JiraSettings(
             base_url="https://test.atlassian.net",
             user="user+test@example.com",
             api_token="token:with:colons",
         )
 
-        client = JiraClient(config)
+        client = JiraClient(settings)
         headers = client.get_auth_headers()
 
         # Should not raise any encoding errors
@@ -69,10 +69,10 @@ class TestJiraClient:
         ],
     )
     def test_url_construction(
-        self, sample_jira_config: JiraConfig, path: str, expected_url: str
+        self, sample_jira_settings: JiraSettings, path: str, expected_url: str
     ) -> None:
         """Test that URLs are properly constructed for API calls."""
-        client = JiraClient(sample_jira_config)
+        client = JiraClient(sample_jira_settings)
 
         # We're testing the URL construction logic, not the HTTP call
         constructed_url = f"{client.base_url}{path}"
@@ -87,10 +87,10 @@ class TestJiraClient:
     )
     def test_base_url_normalization(self, base_url: str, expected_url: str) -> None:
         """Test that base URLs are handled consistently."""
-        config = JiraConfig(
+        settings = JiraSettings(
             base_url=base_url, user="user@example.com", api_token="token123"
         )
-        client = JiraClient(config)
+        client = JiraClient(settings)
 
         # Should store exactly what was provided
         assert client.base_url == expected_url
@@ -98,23 +98,23 @@ class TestJiraClient:
     @pytest.mark.parametrize("timeout", [30, 60, 120])
     def test_timeout_value_stored(self, timeout: int) -> None:
         """Test that timeout configuration is properly stored."""
-        config = JiraConfig(
+        settings = JiraSettings(
             base_url="https://test.atlassian.net",
             user="user@example.com",
             api_token="token123",
             timeout=timeout,
         )
 
-        client = JiraClient(config)
+        client = JiraClient(settings)
         assert client.timeout == timeout
 
     def test_default_timeout(self) -> None:
         """Test default timeout value."""
-        config = JiraConfig(
+        settings = JiraSettings(
             base_url="https://test.atlassian.net",
             user="user@example.com",
             api_token="token123",
         )
 
-        client = JiraClient(config)
+        client = JiraClient(settings)
         assert client.timeout == 30  # Default from config model

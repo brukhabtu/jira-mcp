@@ -17,13 +17,13 @@ if TYPE_CHECKING:
     from fastmcp.server.openapi import FastMCPOpenAPI
 
 from jira_mcp.auth import JiraClient
-from jira_mcp.config import AppConfig
+from jira_mcp.settings import AppSettings
 
 
 class JiraMCPServer:
     """MCP server for Jira integration using FastMCP OpenAPI."""
 
-    def __init__(self, config: AppConfig) -> None:
+    def __init__(self, config: AppSettings) -> None:
         """Initialize the server with configuration."""
         self.config = config
         self.jira_client = JiraClient(config.jira)
@@ -73,44 +73,88 @@ class JiraMCPServer:
             timeout=self.config.jira.timeout,
         )
 
-    def _get_route_filters(self) -> list[RouteMap]:
-        """Get route filtering rules for safe engineering-focused tools.
+
+    def _load_route_config(self) -> list[str]:
+        """Load route configuration from YAML file if specified."""
+        if not self.config.mcp.route_config_path:
+            return []
+            
+        import logging
+        logger = logging.getLogger("jira_mcp")
+        
+        try:
+            config_path = Path(self.config.mcp.route_config_path)
+            with open(config_path, encoding="utf-8") as f:
+                try:
+                    import yaml
+                    config_data = yaml.safe_load(f)
+                except ImportError as e:
+                    msg = f"YAML support requires PyYAML: pip install PyYAML"
+                    raise ImportError(msg) from e
+            
+            # Handle named configurations
+            if self.config.mcp.route_config_name:
+                config_name = self.config.mcp.route_config_name
+                if "configurations" in config_data:
+                    if config_name in config_data["configurations"]:
+                        routes = config_data["configurations"][config_name].get("routes", [])
+                        logger.info(f"Loaded {len(routes)} routes from configuration '{config_name}' in {config_path}")
+                        return routes
+                    else:
+                        available = list(config_data["configurations"].keys())
+                        logger.error(f"Configuration '{config_name}' not found. Available: {available}")
+                        return []
+                else:
+                    logger.error(f"No 'configurations' section found in {config_path}")
+                    return []
+            else:
+                # Fallback to direct routes array for backward compatibility
+                routes = config_data.get("routes", [])
+                logger.info(f"Loaded {len(routes)} routes from {config_path}")
+                return routes
+            
+        except Exception as e:
+            logger.error(f"Failed to load route config from {self.config.mcp.route_config_path}: {e}")
+            return []
+
+    def _get_safe_endpoints(self) -> list[str]:
+        """Get the list of safe endpoints from configuration file."""
+        import logging
+        logger = logging.getLogger("jira_mcp")
+        
+        # Route configuration is required
+        if not self.config.mcp.route_config_path or not self.config.mcp.route_config_name:
+            msg = "Route configuration is required. Set MCP_ROUTE_CONFIG_PATH and MCP_ROUTE_CONFIG_NAME environment variables."
+            raise ValueError(msg)
+        
+        # Load routes from file
+        file_routes = self._load_route_config()
+        if not file_routes:
+            msg = f"Failed to load configuration '{self.config.mcp.route_config_name}' from {self.config.mcp.route_config_path}"
+            raise ValueError(msg)
+        
+        logger.info(f"Using configuration '{self.config.mcp.route_config_name}' with {len(file_routes)} routes")
+        return file_routes
+
+    def _get_route_filters(self) -> list[RouteMap] | None:
+        """Get route filtering rules based on configuration.
 
         Security Model:
-        1. DENY ALL destructive operations (POST, PUT, PATCH, DELETE)
-        2. ALLOW ONLY specific read-only GET endpoints
-        3. DEFAULT DENY everything else
+        1. Load endpoints from YAML configuration
+        2. Check if configuration includes destructive operations
+        3. Apply appropriate filtering
 
-        This whitelist approach ensures only safe, read-only operations
-        are exposed through the MCP interface.
+        Returns None if configuration explicitly allows all operations.
         """
-        # Define safe read-only endpoints for engineering workflows
-        safe_endpoints = [
-            # Core issue management (read-only)
-            r"^/rest/api/3/issue/[^/]+$",  # Get single issue
-            r"^/rest/api/3/search$",  # Search issues/JQL
-            r"^/rest/api/3/issue/[^/]+/comment.*",  # Issue comments
-            r"^/rest/api/3/issue/[^/]+/changelog.*",  # Issue history
-            r"^/rest/api/3/issue/[^/]+/worklog.*",  # Time tracking
-            # Project and structure information
-            r"^/rest/api/3/project.*",  # Project details
-            r"^/rest/api/3/issuetype.*",  # Issue types
-            r"^/rest/api/3/status.*",  # Workflow statuses
-            r"^/rest/api/3/priority.*",  # Issue priorities
-            r"^/rest/api/3/resolution.*",  # Issue resolutions
-            # Agile/Scrum information
-            r"^/rest/api/3/board.*",  # Agile boards
-            r"^/rest/api/3/sprint.*",  # Sprint information
-            # User and team information
-            r"^/rest/api/3/user.*",  # User profiles
-            r"^/rest/api/3/group.*",  # User groups
-            # Dashboards and reporting
-            r"^/rest/api/3/dashboard.*",  # Dashboard data
-            r"^/rest/api/3/filter.*",  # Saved filters
-            # System information (safe metadata)
-            r"^/rest/api/3/serverInfo$",  # Server version info
-            r"^/rest/api/3/field.*",  # Custom fields metadata
-        ]
+        safe_endpoints = self._get_safe_endpoints()
+        
+        # Check if configuration includes the "all operations" pattern
+        # If so, disable filtering entirely (like the old "unsafe" preset)
+        if any(pattern in [r"^/rest/api/.*", "^/rest/api/.*"] for pattern in safe_endpoints):
+            import logging
+            logger = logging.getLogger("jira_mcp")
+            logger.warning("Configuration includes all API endpoints - NO FILTERING applied! Destructive operations are possible.")
+            return None
 
         filters = [
             # SECURITY: Block ALL destructive operations first
@@ -119,7 +163,7 @@ class JiraMCPServer:
             ),
         ]
 
-        # Add whitelisted read-only endpoints
+        # Add configured endpoints (GET only by default)
         filters.extend(
             RouteMap(
                 pattern=pattern,
@@ -146,19 +190,12 @@ class JiraMCPServer:
         # Create authenticated client
         auth_client = await self._create_authenticated_client()
 
-        # Create FastMCP server from OpenAPI specification
-        if self.config.mcp.enable_security_filtering:
-            # Use security filtering (default, recommended)
-            route_maps = self._get_route_filters()
-            logger.info(
-                "Security filtering ENABLED - only safe read-only endpoints exposed"
-            )
+        # Create FastMCP server from OpenAPI specification with route filtering
+        route_maps = self._get_route_filters()
+        if route_maps is None:
+            logger.warning("No route filtering - ALL endpoints exposed!")
         else:
-            # WARNING: No security filtering - exposes ALL Jira API endpoints
-            route_maps = None
-            logger.warning(
-                "Security filtering DISABLED - ALL Jira API endpoints exposed including destructive operations!"
-            )
+            logger.info("Safe route filtering enabled - only read-only endpoints exposed")
 
         self.mcp_server = FastMCP.from_openapi(
             openapi_spec=openapi_spec,

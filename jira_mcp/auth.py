@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 if TYPE_CHECKING:
-    from jira_mcp.config import JiraConfig
+    from jira_mcp.settings import JiraSettings
 else:
-    from jira_mcp.config import JiraConfig
+    from jira_mcp.settings import JiraSettings
 
 
 class JiraClient:
     """Authenticated HTTP client for Jira API."""
 
-    def __init__(self, config: JiraConfig) -> None:
+    def __init__(self, config: JiraSettings) -> None:
         """Initialize the Jira client with configuration."""
         self.base_url = config.base_url
         self.user = config.user

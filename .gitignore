@@ -121,12 +121,19 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.production
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Custom route configurations (keep defaults, ignore customizations)
+route-configs.yaml
+route-configs.local.yaml
+my-routes.yaml
 
 # Spyder project settings
 .spyderproject
@@ -175,8 +182,6 @@ Thumbs.db
 
 # Project specific
 *.log
-.env.local
-.env.production
 
 # Claude Desktop configuration (contains sensitive info)
 claude_desktop_config.json

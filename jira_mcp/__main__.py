@@ -6,7 +6,7 @@ import argparse
 import logging
 import sys
 
-from jira_mcp.config import AppConfig
+from jira_mcp.settings import AppSettings
 
 
 def setup_logging(transport: str) -> logging.Logger:
@@ -62,7 +62,7 @@ def main() -> None:
 
     # Load configuration from environment variables
     try:
-        config = AppConfig.from_env()
+        config = AppSettings()
 
         # Use command line overrides if provided
         if args.transport:
