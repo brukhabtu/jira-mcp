@@ -36,7 +36,7 @@ class TestCLIIntegration:
 
         # Set test environment variables
         os.environ["JIRA_BASE_URL"] = "https://test.atlassian.net"
-        os.environ["JIRA_API_USER"] = "test@example.com"
+        os.environ["JIRA_USER"] = "test@example.com"
         os.environ["JIRA_API_TOKEN"] = "test-token"
 
         try:
@@ -56,14 +56,14 @@ class TestCLIIntegration:
 
             # Verify server was created with correct config
             mock_server_class.assert_called_once()
-            config = mock_server_class.call_args[0][0]
-            assert config.jira.base_url == "https://test.atlassian.net"
-            assert config.jira.user == "test@example.com"
-            assert config.jira.api_token == "test-token"
+            settings = mock_server_class.call_args[0][0]
+            assert settings.jira.base_url == "https://test.atlassian.net"
+            assert settings.jira.user == "test@example.com"
+            assert settings.jira.api_token == "test-token"
 
         finally:
             del os.environ["JIRA_BASE_URL"]
-            del os.environ["JIRA_API_USER"]
+            del os.environ["JIRA_USER"]
             del os.environ["JIRA_API_TOKEN"]
 
     @pytest.mark.integration
@@ -72,7 +72,7 @@ class TestCLIIntegration:
         from jira_mcp.__main__ import main
 
         # Ensure required env vars are not set
-        for var in ["JIRA_BASE_URL", "JIRA_API_USER", "JIRA_API_TOKEN"]:
+        for var in ["JIRA_BASE_URL", "JIRA_USER", "JIRA_API_TOKEN"]:
             if var in os.environ:
                 del os.environ[var]
 

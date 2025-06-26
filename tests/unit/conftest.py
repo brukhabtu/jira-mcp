@@ -5,13 +5,13 @@ from collections.abc import Iterator
 
 import pytest
 
-from jira_mcp.config import AppConfig, JiraConfig, MCPConfig
+from jira_mcp.settings import AppSettings, JiraSettings, MCPSettings
 
 
 @pytest.fixture
-def sample_jira_config() -> JiraConfig:
-    """Create a sample JiraConfig for testing."""
-    return JiraConfig(
+def sample_jira_settings() -> JiraSettings:
+    """Create a sample JiraSettings for testing."""
+    return JiraSettings(
         base_url="https://test.atlassian.net",
         user="test@example.com",
         api_token="test-token",
@@ -20,9 +20,9 @@ def sample_jira_config() -> JiraConfig:
 
 
 @pytest.fixture
-def sample_mcp_config() -> MCPConfig:
-    """Create a sample MCPConfig for testing."""
-    return MCPConfig(
+def sample_mcp_settings() -> MCPSettings:
+    """Create a sample MCPSettings for testing."""
+    return MCPSettings(
         transport="stdio",
         port=8000,
         log_level="INFO",
@@ -30,11 +30,11 @@ def sample_mcp_config() -> MCPConfig:
 
 
 @pytest.fixture
-def sample_app_config(
-    sample_jira_config: JiraConfig, sample_mcp_config: MCPConfig
-) -> AppConfig:
-    """Create a sample AppConfig for testing."""
-    return AppConfig(jira=sample_jira_config, mcp=sample_mcp_config)
+def sample_app_settings(
+    sample_jira_settings: JiraSettings, sample_mcp_settings: MCPSettings
+) -> AppSettings:
+    """Create a sample AppSettings for testing."""
+    return AppSettings(jira=sample_jira_settings, mcp=sample_mcp_settings)
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def clean_env() -> Iterator[None]:
     original_values = {}
     test_vars = [
         "JIRA_BASE_URL",
-        "JIRA_API_USER",
+        "JIRA_USER",
         "JIRA_API_TOKEN",
         "JIRA_TIMEOUT",
         "MCP_TRANSPORT",
@@ -72,7 +72,7 @@ def test_env_vars() -> Iterator[dict[str, str]]:
     """Set up test environment variables."""
     test_values = {
         "JIRA_BASE_URL": "https://test.atlassian.net",
-        "JIRA_API_USER": "test@example.com",
+        "JIRA_USER": "test@example.com",
         "JIRA_API_TOKEN": "test-token",
     }
 

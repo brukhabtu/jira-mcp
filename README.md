@@ -18,13 +18,20 @@ A Jira MCP server that uses FastMCP 2.0's OpenAPI integration to expose Jira fun
 2. Create an API token
 3. Note your Jira instance URL (e.g., `https://yourcompany.atlassian.net`)
 
-### 2. Set Environment Variables
+### 2. Configure Environment
 
 ```bash
-export JIRA_BASE_URL="https://yourcompany.atlassian.net"
-export JIRA_API_USER="your-email@company.com"
-export JIRA_API_TOKEN="your-api-token"
+# Copy and customize the environment file
+cp .env .env.local
+# Edit .env.local with your Jira credentials and preferred configuration
 ```
+
+Required variables:
+- `JIRA_BASE_URL`: Your Jira instance URL
+- `JIRA_API_USER`: Your Jira username/email
+- `JIRA_API_TOKEN`: Your API token
+- `MCP_ROUTE_CONFIG_PATH`: Path to route configuration file
+- `MCP_ROUTE_CONFIG_NAME`: Configuration name to use
 
 ### 3. Run with Docker (Recommended)
 

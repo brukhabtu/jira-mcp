@@ -2,7 +2,7 @@
 
 import pytest
 
-from jira_mcp.config import AppConfig, JiraConfig, MCPConfig
+from jira_mcp.settings import AppSettings, JiraSettings, MCPSettings
 from jira_mcp.server import JiraMCPServer
 
 
@@ -13,19 +13,19 @@ class TestEndToEndIntegration:
     @pytest.mark.slow
     def test_server_initialization_flow_integration(self) -> None:
         """Test that server initialization components work together properly."""
-        config = AppConfig(
-            jira=JiraConfig(
+        settings = AppSettings(
+            jira=JiraSettings(
                 base_url="https://test.atlassian.net",
                 user="test@example.com",
                 api_token="test-token",
             ),
-            mcp=MCPConfig(),
+            mcp=MCPSettings(),
         )
 
-        server = JiraMCPServer(config)
+        server = JiraMCPServer(settings)
 
         # Test that all components are properly initialized
-        assert server.config == config
+        assert server.config == settings
         assert server.jira_client is not None
         assert server.mcp_server is None  # Should be None before initialization
 
@@ -42,16 +42,16 @@ class TestEndToEndIntegration:
     @pytest.mark.slow
     def test_bundled_spec_loading(self) -> None:
         """Test that the bundled OpenAPI spec loads correctly."""
-        config = AppConfig(
-            jira=JiraConfig(
+        settings = AppSettings(
+            jira=JiraSettings(
                 base_url="https://test.atlassian.net",
                 user="test@example.com",
                 api_token="test-token",
             ),
-            mcp=MCPConfig(),
+            mcp=MCPSettings(),
         )
 
-        server = JiraMCPServer(config)
+        server = JiraMCPServer(settings)
 
         # Test that the bundled spec loads without errors
         spec = server._load_openapi_spec()

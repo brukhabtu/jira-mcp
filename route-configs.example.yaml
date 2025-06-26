@@ -1,0 +1,130 @@
+# Route Configurations for Jira MCP Server
+# Customize this file as needed for your use case
+
+configurations:
+  # Safe read-only configurations
+  minimal:
+    description: "Only core issue operations"
+    routes:
+      - "^/rest/api/3/issue/[^/]+$"              # Get single issue
+      - "^/rest/api/3/search$"                   # Search issues/JQL
+
+  basic:
+    description: "Core issues + project info + comments"
+    routes:
+      - "^/rest/api/3/issue/[^/]+$"              # Get single issue
+      - "^/rest/api/3/search$"                   # Search issues/JQL
+      - "^/rest/api/3/issue/[^/]+/comment.*"     # Issue comments
+      - "^/rest/api/3/project.*"                 # Project details
+      - "^/rest/api/3/issuetype.*"               # Issue types
+      - "^/rest/api/3/status.*"                  # Workflow statuses
+
+  read-only-plus:
+    description: "Comprehensive read-only access (recommended)"
+    routes:
+      # Core issue operations
+      - "^/rest/api/3/issue/[^/]+$"              # Get single issue
+      - "^/rest/api/3/search$"                   # Search issues/JQL
+      - "^/rest/api/3/issue/[^/]+/comment.*"     # Issue comments
+      - "^/rest/api/3/issue/[^/]+/changelog.*"   # Issue history
+      - "^/rest/api/3/issue/[^/]+/worklog.*"     # Time tracking
+      - "^/rest/api/3/issue/[^/]+/attachments.*" # View attachments
+      - "^/rest/api/3/issue/[^/]+/transitions.*" # View available transitions
+      # Project information
+      - "^/rest/api/3/project.*"                 # Project details
+      - "^/rest/api/3/issuetype.*"               # Issue types
+      - "^/rest/api/3/status.*"                  # Workflow statuses
+      - "^/rest/api/3/priority.*"                # Issue priorities
+      - "^/rest/api/3/resolution.*"              # Issue resolutions
+      # User and team information
+      - "^/rest/api/3/user.*"                    # User profiles
+      - "^/rest/api/3/group.*"                   # User groups
+      # System information
+      - "^/rest/api/3/serverInfo$"               # Server version info
+      - "^/rest/api/3/field.*"                   # Custom fields metadata
+
+  reporting:
+    description: "Optimized for reporting and analytics"
+    routes:
+      # Core data access
+      - "^/rest/api/3/issue/[^/]+$"
+      - "^/rest/api/3/search$"
+      - "^/rest/api/3/issue/[^/]+/changelog.*"
+      - "^/rest/api/3/issue/[^/]+/worklog.*"
+      # Reporting features
+      - "^/rest/api/3/dashboard.*"               # Dashboard data
+      - "^/rest/api/3/filter.*"                  # Saved filters
+      - "^/rest/api/3/project/[^/]+/statuses.*"
+      - "^/rest/api/3/project/[^/]+/versions.*"
+      - "^/rest/api/3/project/[^/]+/components.*"
+      # Agile reporting
+      - "^/rest/api/3/board.*"                   # Agile boards
+      - "^/rest/api/3/sprint.*"                  # Sprint information
+      # Metadata
+      - "^/rest/api/3/field.*"
+      - "^/rest/api/3/priority.*"
+      - "^/rest/api/3/resolution.*"
+
+  # Semi-safe configurations (limited write access)
+  issue-management:
+    description: "Read + limited issue management capabilities"
+    routes:
+      # Read operations (all safe configs)
+      - "^/rest/api/3/issue/[^/]+$"
+      - "^/rest/api/3/search$"
+      - "^/rest/api/3/issue/[^/]+/comment.*"
+      - "^/rest/api/3/issue/[^/]+/changelog.*"
+      - "^/rest/api/3/issue/[^/]+/worklog.*"
+      - "^/rest/api/3/issue/[^/]+/attachments.*"
+      - "^/rest/api/3/issue/[^/]+/transitions.*"
+      - "^/rest/api/3/project.*"
+      - "^/rest/api/3/issuetype.*"
+      - "^/rest/api/3/status.*"
+      # Limited write operations (use with caution)
+      - "^/rest/api/3/issue/[^/]+/comment$"           # ⚠️ Add comments (POST)
+      - "^/rest/api/3/issue/[^/]+/worklog$"           # ⚠️ Add time logs (POST)
+      - "^/rest/api/3/issue/[^/]+/transitions$"       # ⚠️ Transition issues (POST)
+      
+  content-management:
+    description: "Content creation and editing capabilities"
+    routes:
+      # All read operations
+      - "^/rest/api/3/issue/[^/]+$"
+      - "^/rest/api/3/search$"
+      - "^/rest/api/3/issue/[^/]+/comment.*"
+      - "^/rest/api/3/issue/[^/]+/worklog.*"
+      - "^/rest/api/3/project.*"
+      - "^/rest/api/3/issuetype.*"
+      - "^/rest/api/3/status.*"
+      # Content operations (use with caution)
+      - "^/rest/api/3/issue/[^/]+/comment$"           # ⚠️ Add comments (POST)
+      - "^/rest/api/3/issue/[^/]+/comment/[^/]+$"     # ⚠️ Edit comments (PUT)
+      - "^/rest/api/3/issue/[^/]+/worklog$"           # ⚠️ Add time logs (POST)
+      - "^/rest/api/3/issue/[^/]+/worklog/[^/]+$"     # ⚠️ Edit time logs (PUT)
+
+  # Dangerous configurations (full access)
+  development:
+    description: "⚠️ For development/testing environments only"
+    routes:
+      # Read operations
+      - "^/rest/api/3/issue/[^/]+$"
+      - "^/rest/api/3/search$"
+      - "^/rest/api/3/project.*"
+      - "^/rest/api/3/issuetype.*"
+      - "^/rest/api/3/status.*"
+      # Development operations (use only in test environments)
+      - "^/rest/api/3/issue$"                         # ⚠️ Create issues (POST)
+      - "^/rest/api/3/issue/[^/]+$"                   # ⚠️ Update issues (PUT)
+      - "^/rest/api/3/issue/[^/]+/comment.*"          # ⚠️ Comment operations
+      - "^/rest/api/3/issue/[^/]+/worklog.*"          # ⚠️ Worklog operations
+      - "^/rest/api/3/issue/[^/]+/transitions$"       # ⚠️ Transition issues (POST)
+
+  full-access:
+    description: "⚠️ DANGER: Complete access including destructive operations"
+    routes:
+      # WARNING: This allows ALL operations including:
+      # - Creating, updating, deleting issues
+      # - Project management
+      # - User management
+      # - System configuration changes
+      - "^/rest/api/.*"

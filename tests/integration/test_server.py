@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from jira_mcp.config import AppConfig, JiraConfig, MCPConfig
+from jira_mcp.settings import AppSettings, JiraSettings, MCPSettings
 from jira_mcp.server import JiraMCPServer
 
 
@@ -14,16 +14,16 @@ class TestServerIntegration:
     @pytest.mark.integration
     def test_server_run_requires_initialization(self) -> None:
         """Test that run() fails if server not initialized (integration test)."""
-        config = AppConfig(
-            jira=JiraConfig(
+        settings = AppSettings(
+            jira=JiraSettings(
                 base_url="https://test.atlassian.net",
                 user="test@example.com",
                 api_token="token",
             ),
-            mcp=MCPConfig(),
+            mcp=MCPSettings(),
         )
 
-        server = JiraMCPServer(config)
+        server = JiraMCPServer(settings)
 
         # Should raise error when trying to run uninitialized server
         with pytest.raises(RuntimeError, match="Server not initialized"):
@@ -32,16 +32,16 @@ class TestServerIntegration:
     @pytest.mark.integration
     def test_server_unsupported_transport_raises_error(self) -> None:
         """Test that unsupported transport configurations raise appropriate errors."""
-        config = AppConfig(
-            jira=JiraConfig(
+        settings = AppSettings(
+            jira=JiraSettings(
                 base_url="https://test.atlassian.net",
                 user="test@example.com",
                 api_token="token",
             ),
-            mcp=MCPConfig(transport="invalid-transport"),
+            mcp=MCPSettings(transport="invalid-transport"),
         )
 
-        server = JiraMCPServer(config)
+        server = JiraMCPServer(settings)
 
         # Mock an initialized server with invalid transport
         server.mcp_server = Mock()

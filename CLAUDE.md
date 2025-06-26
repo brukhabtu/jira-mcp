@@ -93,22 +93,39 @@ The server implements a security-first approach with configurable filtering:
 2. **ALLOW ONLY** specific safe read-only GET endpoints
 3. **DEFAULT DENY** everything else
 
-**Whitelisted Safe Endpoints:**
-- Core issue management (get, search, comments, history, worklog)
-- Project information (projects, issue types, statuses, priorities, resolutions)
-- Agile data (boards, sprints)
-- User and team information (users, groups)
-- Dashboards and filters
-- Safe system metadata (server info, custom fields)
+**Route Configuration (Required):**
 
-**Security Configuration:**
-- `MCP_ENABLE_SECURITY_FILTERING=true` (default): Only safe endpoints exposed
-- `MCP_ENABLE_SECURITY_FILTERING=false`: **WARNING** - Exposes ALL Jira API endpoints including destructive operations
+All route configurations are defined in YAML files with named configurations:
+
+- **`MCP_ROUTE_CONFIG_PATH`**: Path to YAML file with route definitions
+- **`MCP_ROUTE_CONFIG_NAME`**: Name of configuration to use from the file
+
+**Available Configurations** (in `route-configs.yaml`):
+
+**Safe (Read-Only):**
+- `minimal`: Only core issue operations (get issue, search)
+- `basic`: Core issues + project info + comments
+- `read-only-plus`: Comprehensive read-only access (recommended)
+- `reporting`: Optimized for analytics and dashboards
+
+**Semi-Safe (Limited Write):**
+- `issue-management`: Limited write capabilities (comments, worklogs, transitions)
+- `content-management`: Comment and worklog editing
+
+**Dangerous (Full Write Access):**
+- `development`: For testing environments only
+- `full-access`: ⚠️ All endpoints including destructive operations
+
+**Security Model:**
+- **Default**: Safe read-only operations only (blocks POST, PUT, PATCH, DELETE)
+- **All-access pattern**: `^/rest/api/.*` in config removes all filtering (use with extreme caution)
 
 ### Required Environment Variables
 - `JIRA_BASE_URL`: Your Jira instance URL (e.g., `https://company.atlassian.net`)
 - `JIRA_API_USER`: Your Jira username/email address  
 - `JIRA_API_TOKEN`: Your Jira API token
+- `MCP_ROUTE_CONFIG_PATH`: Path to YAML file with route configurations
+- `MCP_ROUTE_CONFIG_NAME`: Name of configuration to use from YAML file
 
 ### Optional Environment Variables
 - `JIRA_TIMEOUT`: HTTP timeout in seconds (default: 30)
@@ -116,7 +133,6 @@ The server implements a security-first approach with configurable filtering:
 - `MCP_TRANSPORT`: Transport method - stdio, http, sse (default: stdio)
 - `MCP_PORT`: Port for HTTP/SSE transport (default: 8000)
 - `MCP_LOG_LEVEL`: Logging level (default: INFO)
-- `MCP_ENABLE_SECURITY_FILTERING`: Enable security filtering (default: true)
 
 ### CI/CD and Testing
 
